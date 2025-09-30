@@ -1,0 +1,37 @@
+{
+    "id": "worldClock",
+    "name": "World Clock",
+    "description": "Multiple timezones display widget",
+    "version": "1.0.0",
+    "author": "DMS Plugin System",
+    "icon": "public",
+    "component": "./WorldClockWidget.qml",
+    "settings": "./WorldClockSettings.qml",
+    "dependencies": {
+        "moment": {
+            "url": "https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js",
+            "optional": true
+        },
+        "moment-timezone": {
+            "url": "https://cdn.jsdelivr.net/npm/moment-timezone@0.5.43/builds/moment-timezone-with-data.min.js",
+            "optional": true
+        }
+    },
+    "settings_schema": {
+        "worldClockTimezones": {
+            "type": "array",
+            "default": [],
+            "items": {
+                "type": "object",
+                "properties": {
+                    "timezone": {"type": "string"},
+                    "label": {"type": "string"}
+                }
+            }
+        }
+    },
+    "permissions": [
+        "settings_read",
+        "settings_write"
+    ]
+}
