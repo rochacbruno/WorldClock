@@ -2,17 +2,20 @@
 
 A plugin that displays multiple timezones in the DMS bar.
 
+<img width="750" height="144" alt="Screenshot from 2025-09-30 19-59-51" src="https://github.com/user-attachments/assets/2baf3682-9c9e-4e1d-a31e-79a73f73bfb3" />
+
+
+
 ## Installation
 
-1. This plugin is automatically available in the DMS plugins directory
-2. For full timezone functionality, download the required JavaScript dependencies:
-   - Download `moment.js` from: https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js
-   - Download `moment-timezone.js` from: https://cdn.jsdelivr.net/npm/moment-timezone@0.5.43/builds/moment-timezone-with-data.min.js
-   - Replace the stub files in this directory with the real ones
+```bash
+mkdir -p ~/.config/DankMaterialShell/plugins/
+git clone https://github.com/rochacbruno/WorldClock ~/.config/DankMaterialShell/plugins/WorldClock
+```
 
 ## Usage
 
-1. Open DMS Settings (usually with a keyboard shortcut or from the control center)
+1. Open DMS Settings <kbd>Super + , </kbd>
 2. Go to the "Plugins" tab
 3. Enable the "World Clock" plugin
 4. Configure timezones in the plugin settings
@@ -44,3 +47,7 @@ The plugin stores timezone configurations in the DMS settings. You can add/remov
 This plugin requires:
 - `settings_read` - To read timezone configurations
 - `settings_write` - To save timezone configurations
+
+
+<img width="792" height="786" alt="Screenshot from 2025-09-30 19-34-34" src="https://github.com/user-attachments/assets/98e03d98-2752-41cf-9678-419a11560031" />
+<img width="490" height="574" alt="Screenshot from 2025-09-30 19-34-51" src="https://github.com/user-attachments/assets/87d7b179-8ed5-4ef4-9de1-de27137c8544" />
