@@ -10,21 +10,14 @@ PluginComponent {
 
     property var timezones: []
     property var pluginService: null
+    property bool isLoading: true
 
     function loadTimezones() {
         if (pluginService && pluginService.loadPluginData) {
             const saved = pluginService.loadPluginData("worldClock", "timezones", [])
-            if (saved && Array.isArray(saved) && saved.length > 0) {
-                timezones = saved
-                return
-            }
+            timezones = (saved && Array.isArray(saved)) ? saved : []
+            isLoading = false
         }
-
-        timezones = [
-            { timezone: "America/New_York", label: "NYC" },
-            { timezone: "Europe/London", label: "London" },
-            { timezone: "Asia/Tokyo", label: "Tokyo" }
-        ]
     }
 
     Component.onCompleted: {
@@ -46,6 +39,43 @@ PluginComponent {
     horizontalBarPill: Component {
         Row {
             spacing: Theme.spacingS
+
+            // Loading spinner
+            Item {
+                width: 16
+                height: 16
+                anchors.verticalCenter: parent.verticalCenter
+                visible: root.isLoading
+
+                Rectangle {
+                    id: spinner
+                    width: 12
+                    height: 12
+                    radius: 6
+                    color: "transparent"
+                    border.width: 2
+                    border.color: Theme.surfaceVariantText
+                    anchors.centerIn: parent
+
+                    Rectangle {
+                        width: 4
+                        height: 4
+                        radius: 2
+                        color: Theme.surfaceVariantText
+                        anchors.top: parent.top
+                        anchors.horizontalCenter: parent.horizontalCenter
+                    }
+
+                    RotationAnimation {
+                        target: spinner
+                        from: 0
+                        to: 360
+                        duration: 1000
+                        loops: Animation.Infinite
+                        running: root.isLoading
+                    }
+                }
+            }
 
             Repeater {
                 model: root.timezones
@@ -80,7 +110,7 @@ PluginComponent {
                 font.pixelSize: Theme.fontSizeMedium
                 color: Theme.surfaceVariantText
                 anchors.verticalCenter: parent.verticalCenter
-                visible: root.timezones.length === 0
+                visible: !root.isLoading && root.timezones.length === 0
             }
         }
     }
@@ -88,6 +118,43 @@ PluginComponent {
     verticalBarPill: Component {
         Column {
             spacing: Theme.spacingXS
+
+            // Loading spinner
+            Item {
+                width: 16
+                height: 16
+                anchors.horizontalCenter: parent.horizontalCenter
+                visible: root.isLoading
+
+                Rectangle {
+                    id: spinnerVertical
+                    width: 12
+                    height: 12
+                    radius: 6
+                    color: "transparent"
+                    border.width: 2
+                    border.color: Theme.surfaceVariantText
+                    anchors.centerIn: parent
+
+                    Rectangle {
+                        width: 4
+                        height: 4
+                        radius: 2
+                        color: Theme.surfaceVariantText
+                        anchors.top: parent.top
+                        anchors.horizontalCenter: parent.horizontalCenter
+                    }
+
+                    RotationAnimation {
+                        target: spinnerVertical
+                        from: 0
+                        to: 360
+                        duration: 1000
+                        loops: Animation.Infinite
+                        running: root.isLoading
+                    }
+                }
+            }
 
             Repeater {
                 model: root.timezones
@@ -127,7 +194,7 @@ PluginComponent {
                 font.pixelSize: Theme.fontSizeSmall
                 color: Theme.surfaceVariantText
                 anchors.horizontalCenter: parent.horizontalCenter
-                visible: root.timezones.length === 0
+                visible: !root.isLoading && root.timezones.length === 0
             }
         }
     }
@@ -146,6 +213,42 @@ PluginComponent {
             Column {
                 width: parent.width
                 spacing: Theme.spacingS
+
+                // Loading spinner
+                Item {
+                    width: parent.width
+                    height: 60
+                    visible: root.isLoading
+
+                    Rectangle {
+                        id: spinnerPopout
+                        width: 24
+                        height: 24
+                        radius: 12
+                        color: "transparent"
+                        border.width: 3
+                        border.color: Theme.surfaceVariantText
+                        anchors.centerIn: parent
+
+                        Rectangle {
+                            width: 6
+                            height: 6
+                            radius: 3
+                            color: Theme.surfaceVariantText
+                            anchors.top: parent.top
+                            anchors.horizontalCenter: parent.horizontalCenter
+                        }
+
+                        RotationAnimation {
+                            target: spinnerPopout
+                            from: 0
+                            to: 360
+                            duration: 1000
+                            loops: Animation.Infinite
+                            running: root.isLoading
+                        }
+                    }
+                }
 
                 Repeater {
                     model: root.timezones
@@ -193,7 +296,7 @@ PluginComponent {
                     text: "No timezones configured.\nAdd some in the plugin settings."
                     color: Theme.surfaceVariantText
                     font.pixelSize: Theme.fontSizeMedium
-                    visible: root.timezones.length === 0
+                    visible: !root.isLoading && root.timezones.length === 0
                 }
             }
         }
