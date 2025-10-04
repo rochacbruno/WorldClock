@@ -3,7 +3,7 @@
     "name": "World Clock",
     "description": "Multiple timezones display widget",
     "version": "1.0.0",
-    "author": "DMS Plugin System",
+    "author": "Bruno Cesar Rocha <rochacbruno>",
     "icon": "public",
     "component": "./WorldClockWidget.qml",
     "settings": "./WorldClockSettings.qml",
