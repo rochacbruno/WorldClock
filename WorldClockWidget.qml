@@ -11,11 +11,13 @@ PluginComponent {
     property var timezones: []
     property var pluginService: null
     property bool isLoading: true
+    property bool iconOnly: false
 
     function loadTimezones() {
         if (pluginService && pluginService.loadPluginData) {
             const saved = pluginService.loadPluginData("worldClock", "timezones", [])
             timezones = (saved && Array.isArray(saved)) ? saved : []
+            iconOnly = pluginService.loadPluginData("worldClock", "iconOnly", false) === true
             isLoading = false
         }
     }
@@ -40,12 +42,21 @@ PluginComponent {
         Row {
             spacing: Theme.spacingS
 
+            // Icon-only mode
+            StyledText {
+                text: "\u{1F310}\uFE0E" // Uses unicode symbol for cleaner look
+                font.pixelSize: Theme.fontSizeLarge
+                color: Theme.surfaceText
+                anchors.verticalCenter: parent.verticalCenter
+                visible: root.iconOnly
+            }
+
             // Loading spinner
             Item {
                 width: 16
                 height: 16
                 anchors.verticalCenter: parent.verticalCenter
-                visible: root.isLoading
+                visible: root.isLoading && !root.iconOnly
 
                 Rectangle {
                     id: spinner
@@ -78,7 +89,7 @@ PluginComponent {
             }
 
             Repeater {
-                model: root.timezones
+                model: root.iconOnly ? [] : root.timezones
 
                 StyledText {
                     text: {
@@ -110,7 +121,7 @@ PluginComponent {
                 font.pixelSize: Theme.fontSizeMedium
                 color: Theme.surfaceVariantText
                 anchors.verticalCenter: parent.verticalCenter
-                visible: !root.isLoading && root.timezones.length === 0
+                visible: !root.isLoading && root.timezones.length === 0 && !root.iconOnly
             }
         }
     }
@@ -119,12 +130,21 @@ PluginComponent {
         Column {
             spacing: Theme.spacingXS
 
+            // Icon-only mode
+            StyledText {
+                text: "\u{1F310}\uFE0E"
+                font.pixelSize: Theme.fontSizeLarge
+                color: Theme.surfaceText
+                anchors.horizontalCenter: parent.horizontalCenter
+                visible: root.iconOnly
+            }
+
             // Loading spinner
             Item {
                 width: 16
                 height: 16
                 anchors.horizontalCenter: parent.horizontalCenter
-                visible: root.isLoading
+                visible: root.isLoading && !root.iconOnly
 
                 Rectangle {
                     id: spinnerVertical
@@ -157,7 +177,7 @@ PluginComponent {
             }
 
             Repeater {
-                model: root.timezones
+                model: root.iconOnly ? [] : root.timezones
 
                 Column {
                     spacing: 1
@@ -194,7 +214,7 @@ PluginComponent {
                 font.pixelSize: Theme.fontSizeSmall
                 color: Theme.surfaceVariantText
                 anchors.horizontalCenter: parent.horizontalCenter
-                visible: !root.isLoading && root.timezones.length === 0
+                visible: !root.isLoading && root.timezones.length === 0 && !root.iconOnly
             }
         }
     }

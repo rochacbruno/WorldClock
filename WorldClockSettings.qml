@@ -8,6 +8,13 @@ PluginSettings {
 
     pluginId: "worldClock"
 
+    ToggleSetting {
+        settingKey: "iconOnly"
+        label: "Icon Only"
+        description: "Display only a globe icon in the bar"
+        defaultValue: false
+    }
+
     ListSettingWithInput {
         settingKey: "timezones"
         label: "Timezones"
