@@ -8,16 +8,33 @@ import "timezone-utils.js" as TimezoneUtils
 PluginComponent {
     id: root
 
+    // ── Persisted settings ──────────────────────────────────────────
     property var timezones: []
     property var pluginService: null
     property bool isLoading: true
     property bool iconOnly: false
+    property bool showAll: true
+    property int cycleInterval: 15
+    property bool use24h: true
+
+    // ── Runtime state ───────────────────────────────────────────────
+    property int currentIndex: 0
 
     function loadTimezones() {
         if (pluginService && pluginService.loadPluginData) {
-            const saved = pluginService.loadPluginData("worldClock", "timezones", [])
+            var saved = pluginService.loadPluginData("worldClock", "timezones", [])
             timezones = (saved && Array.isArray(saved)) ? saved : []
+
             iconOnly = pluginService.loadPluginData("worldClock", "iconOnly", false) === true
+            showAll = pluginService.loadPluginData("worldClock", "showAll", true) !== false
+            cycleInterval = pluginService.loadPluginData("worldClock", "cycleInterval", 15) || 15
+            use24h = pluginService.loadPluginData("worldClock", "use24h", true) !== false
+
+            var savedIdx = pluginService.loadPluginState
+                ? pluginService.loadPluginState("worldClock", "currentIndex", 0)
+                : 0
+            currentIndex = (savedIdx >= 0 && savedIdx < timezones.length) ? savedIdx : 0
+
             isLoading = false
         }
     }
@@ -26,8 +43,9 @@ PluginComponent {
         loadTimezones()
     }
 
+    // Re-read settings periodically so the bar picks up changes
     Timer {
-        interval: 5000
+        interval: 3000
         running: true
         repeat: true
         onTriggered: loadTimezones()
@@ -38,17 +56,59 @@ PluginComponent {
         precision: SystemClock.Seconds
     }
 
+    // ── Cycle timer (only active in cycling mode) ──────────────────
+    Timer {
+        id: cycleTimer
+        interval: root.cycleInterval * 1000
+        running: !root.showAll && root.timezones.length > 1
+        repeat: true
+        onTriggered: {
+            root.currentIndex = (root.currentIndex + 1) % root.timezones.length
+            if (root.pluginService && root.pluginService.savePluginState) {
+                root.pluginService.savePluginState("worldClock", "currentIndex", root.currentIndex)
+            }
+        }
+    }
+
+    // ── Helpers ─────────────────────────────────────────────────────
+    function labelFor(entry) {
+        return (entry && entry.label) ? entry.label : TimezoneUtils.cityFromTz(entry.timezone)
+    }
+
+    function formatTime(tz) {
+        if (!systemClock || !systemClock.date) return "..."
+        try {
+            if (TimezoneUtils.isMomentAvailable() && tz) {
+                return TimezoneUtils.getTimeInTimezone(tz, root.use24h)
+            }
+        } catch (e) {}
+        return "ERR"
+    }
+
+    function entryText(entry) {
+        return labelFor(entry) + " " + formatTime(entry.timezone)
+    }
+
+    // Model for the bar: either all timezones or just the current one
+    function visibleModel() {
+        if (timezones.length === 0) return []
+        if (showAll) return timezones
+        var idx = Math.min(currentIndex, timezones.length - 1)
+        return [timezones[idx]]
+    }
+
+    // ── Horizontal bar pill ─────────────────────────────────────────
     horizontalBarPill: Component {
         Row {
             spacing: Theme.spacingS
 
-            // Icon-only mode
+            // Icon-only mode: globe when showAll, cycling text when !showAll
             StyledText {
-                text: "\u{1F310}\uFE0E" // Uses unicode symbol for cleaner look
+                text: "\u{1F310}\uFE0E"
                 font.pixelSize: Theme.fontSizeLarge
                 color: Theme.surfaceText
                 anchors.verticalCenter: parent.verticalCenter
-                visible: root.iconOnly
+                visible: root.iconOnly && root.showAll
             }
 
             // Loading spinner
@@ -88,31 +148,40 @@ PluginComponent {
                 }
             }
 
+            // Icon-only cycling mode: show one timezone at a time
             Repeater {
-                model: root.iconOnly ? [] : root.timezones
+                model: (root.iconOnly && !root.showAll) ? root.visibleModel() : []
 
                 StyledText {
-                    text: {
-                        if (!systemClock || !systemClock.date) return "..."
-
-                        const label = (modelData && modelData.label) ? modelData.label : modelData.timezone.split('/').pop().replace(/_/g, ' ')
-                        let timeString = ""
-
-                        try {
-                            if (TimezoneUtils.isMomentAvailable() && modelData && modelData.timezone) {
-                                timeString = TimezoneUtils.getTimeInTimezone(modelData.timezone, true)
-                            } else {
-                                timeString = "ERR"
-                            }
-                        } catch (e) {
-                            timeString = "ERR"
-                        }
-
-                        return label + " " + timeString
-                    }
+                    text: root.entryText(modelData)
                     font.pixelSize: Theme.fontSizeMedium
                     color: Theme.surfaceText
                     anchors.verticalCenter: parent.verticalCenter
+                }
+            }
+
+            // Normal mode: show visible timezones with dot separators
+            Repeater {
+                model: root.iconOnly ? [] : root.visibleModel()
+
+                Row {
+                    spacing: Theme.spacingXS
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    StyledText {
+                        text: "\u00B7"
+                        font.pixelSize: Theme.fontSizeMedium
+                        color: Theme.withAlpha(Theme.surfaceText, 0.4)
+                        visible: index > 0
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    StyledText {
+                        text: root.entryText(modelData)
+                        font.pixelSize: Theme.fontSizeMedium
+                        color: Theme.surfaceText
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
                 }
             }
 
@@ -126,82 +195,61 @@ PluginComponent {
         }
     }
 
+    // ── Vertical bar pill ───────────────────────────────────────────
     verticalBarPill: Component {
         Column {
             spacing: Theme.spacingXS
 
-            // Icon-only mode
+            // Icon-only mode: globe when showAll
             StyledText {
                 text: "\u{1F310}\uFE0E"
                 font.pixelSize: Theme.fontSizeLarge
                 color: Theme.surfaceText
                 anchors.horizontalCenter: parent.horizontalCenter
-                visible: root.iconOnly
+                visible: root.iconOnly && root.showAll
             }
 
-            // Loading spinner
-            Item {
-                width: 16
-                height: 16
-                anchors.horizontalCenter: parent.horizontalCenter
-                visible: root.isLoading && !root.iconOnly
+            // Icon-only cycling mode: show one timezone at a time
+            Repeater {
+                model: (root.iconOnly && !root.showAll) ? root.visibleModel() : []
 
-                Rectangle {
-                    id: spinnerVertical
-                    width: 12
-                    height: 12
-                    radius: 6
-                    color: "transparent"
-                    border.width: 2
-                    border.color: Theme.surfaceVariantText
-                    anchors.centerIn: parent
+                Column {
+                    spacing: 1
+                    anchors.horizontalCenter: parent.horizontalCenter
 
-                    Rectangle {
-                        width: 4
-                        height: 4
-                        radius: 2
+                    StyledText {
+                        text: root.labelFor(modelData)
+                        font.pixelSize: Theme.fontSizeSmall
                         color: Theme.surfaceVariantText
-                        anchors.top: parent.top
                         anchors.horizontalCenter: parent.horizontalCenter
                     }
 
-                    RotationAnimation {
-                        target: spinnerVertical
-                        from: 0
-                        to: 360
-                        duration: 1000
-                        loops: Animation.Infinite
-                        running: root.isLoading
+                    StyledText {
+                        text: root.formatTime(modelData.timezone)
+                        font.pixelSize: Theme.fontSizeSmall
+                        color: Theme.surfaceText
+                        anchors.horizontalCenter: parent.horizontalCenter
                     }
                 }
             }
 
+            // Normal mode
             Repeater {
-                model: root.iconOnly ? [] : root.timezones
+                model: root.iconOnly ? [] : root.visibleModel()
 
                 Column {
                     spacing: 1
+                    anchors.horizontalCenter: parent.horizontalCenter
 
                     StyledText {
-                        text: (modelData && modelData.label) ? modelData.label : ""
+                        text: root.labelFor(modelData)
                         font.pixelSize: Theme.fontSizeSmall
                         color: Theme.surfaceVariantText
                         anchors.horizontalCenter: parent.horizontalCenter
-                        visible: text !== ""
                     }
 
                     StyledText {
-                        text: {
-                            if (!systemClock || !systemClock.date) return "..."
-
-                            try {
-                                if (TimezoneUtils.isMomentAvailable() && modelData && modelData.timezone) {
-                                    return TimezoneUtils.getTimeInTimezone(modelData.timezone, true)
-                                }
-                            } catch (e) {}
-
-                            return "ERR"
-                        }
+                        text: root.formatTime(modelData.timezone)
                         font.pixelSize: Theme.fontSizeSmall
                         color: Theme.surfaceText
                         anchors.horizontalCenter: parent.horizontalCenter
@@ -219,6 +267,7 @@ PluginComponent {
         }
     }
 
+    // ── Popout panel (click to expand) ──────────────────────────────
     popoutContent: Component {
         Column {
             spacing: Theme.spacingL
@@ -228,6 +277,15 @@ PluginComponent {
                 font.pixelSize: Theme.fontSizeXLarge
                 font.weight: Font.Bold
                 color: Theme.surfaceText
+            }
+
+            // Display mode indicator
+            StyledText {
+                text: root.showAll
+                    ? "Showing all clocks"
+                    : "Cycling every " + root.cycleInterval + "s"
+                font.pixelSize: Theme.fontSizeSmall
+                color: Theme.surfaceVariantText
             }
 
             Column {
@@ -275,9 +333,11 @@ PluginComponent {
 
                     StyledRect {
                         width: parent.width
-                        height: 60
+                        height: 64
                         radius: Theme.cornerRadius
-                        color: Theme.surfaceContainerHigh
+                        color: (root.currentIndex === index && !root.showAll)
+                            ? Theme.withAlpha(Theme.primary, 0.15)
+                            : Theme.surfaceContainerHigh
                         border.width: 0
 
                         Column {
@@ -287,27 +347,27 @@ PluginComponent {
                             spacing: Theme.spacingXS
 
                             StyledText {
-                                text: (modelData && modelData.label) ? modelData.label : modelData.timezone.split('/').pop().replace(/_/g, ' ')
+                                text: root.labelFor(modelData)
                                 color: Theme.surfaceText
                                 font.pixelSize: Theme.fontSizeLarge
                                 font.weight: Font.Medium
                             }
 
                             StyledText {
-                                text: {
-                                    if (!systemClock || !systemClock.date) return "Loading..."
-
-                                    try {
-                                        if (TimezoneUtils.isMomentAvailable() && modelData && modelData.timezone) {
-                                            return TimezoneUtils.getTimeInTimezone(modelData.timezone, true)
-                                        }
-                                    } catch (e) {}
-
-                                    return "Error"
-                                }
+                                text: modelData.timezone
                                 color: Theme.surfaceVariantText
-                                font.pixelSize: Theme.fontSizeMedium
+                                font.pixelSize: Theme.fontSizeSmall
                             }
+                        }
+
+                        StyledText {
+                            text: root.formatTime(modelData.timezone)
+                            color: Theme.primary
+                            font.pixelSize: Theme.fontSizeXLarge
+                            font.weight: Font.Bold
+                            anchors.right: parent.right
+                            anchors.rightMargin: Theme.spacingL
+                            anchors.verticalCenter: parent.verticalCenter
                         }
                     }
                 }
@@ -322,6 +382,6 @@ PluginComponent {
         }
     }
 
-    popoutWidth: 360
-    popoutHeight: 400
+    popoutWidth: 380
+    popoutHeight: 420
 }
