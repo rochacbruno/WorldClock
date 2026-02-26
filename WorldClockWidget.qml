@@ -119,6 +119,18 @@ PluginComponent {
         }
     }
 
+    // Move a timezone from one index to another and persist
+    function moveTimezone(fromIndex, toIndex) {
+        if (toIndex < 0 || toIndex >= timezones.length) return
+        var updated = timezones.slice()
+        var item = updated.splice(fromIndex, 1)[0]
+        updated.splice(toIndex, 0, item)
+        timezones = updated
+        if (pluginService && pluginService.savePluginData) {
+            pluginService.savePluginData("worldClock", "timezones", updated)
+        }
+    }
+
     // ── Horizontal bar pill ─────────────────────────────────────────
     horizontalBarPill: Component {
         Row {
@@ -387,6 +399,24 @@ PluginComponent {
                             anchors.rightMargin: Theme.spacingL
                             anchors.verticalCenter: parent.verticalCenter
                             spacing: Theme.spacingS
+
+                            DankActionButton {
+                                buttonSize: 24
+                                iconName: "arrow_upward"
+                                iconColor: Theme.surfaceVariantText
+                                visible: index > 0
+                                anchors.verticalCenter: parent.verticalCenter
+                                onClicked: root.moveTimezone(index, index - 1)
+                            }
+
+                            DankActionButton {
+                                buttonSize: 24
+                                iconName: "arrow_downward"
+                                iconColor: Theme.surfaceVariantText
+                                visible: index < root.timezones.length - 1
+                                anchors.verticalCenter: parent.verticalCenter
+                                onClicked: root.moveTimezone(index, index + 1)
+                            }
 
                             DankActionButton {
                                 buttonSize: 28
