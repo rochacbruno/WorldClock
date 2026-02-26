@@ -33,7 +33,8 @@ PluginComponent {
             var savedIdx = pluginService.loadPluginState
                 ? pluginService.loadPluginState("worldClock", "currentIndex", 0)
                 : 0
-            currentIndex = (savedIdx >= 0 && savedIdx < timezones.length) ? savedIdx : 0
+            var barCount = barTimezones().length
+            currentIndex = (savedIdx >= 0 && barCount > 0 && savedIdx < barCount) ? savedIdx : 0
 
             isLoading = false
         }
@@ -60,10 +61,13 @@ PluginComponent {
     Timer {
         id: cycleTimer
         interval: root.cycleInterval * 1000
-        running: !root.showAll && root.timezones.length > 1
+        running: !root.showAll && root.barTimezones().length > 1
         repeat: true
         onTriggered: {
-            root.currentIndex = (root.currentIndex + 1) % root.timezones.length
+            var barCount = root.barTimezones().length
+            if (barCount > 0) {
+                root.currentIndex = (root.currentIndex + 1) % barCount
+            }
             if (root.pluginService && root.pluginService.savePluginState) {
                 root.pluginService.savePluginState("worldClock", "currentIndex", root.currentIndex)
             }
@@ -89,12 +93,30 @@ PluginComponent {
         return labelFor(entry) + " " + formatTime(entry.timezone)
     }
 
-    // Model for the bar: either all timezones or just the current one
+    // Timezones filtered to only those visible on the bar
+    function barTimezones() {
+        return timezones.filter(function(entry) { return entry.showOnBar !== false; })
+    }
+
+    // Model for the bar: either all bar-visible timezones or just the current one
     function visibleModel() {
-        if (timezones.length === 0) return []
-        if (showAll) return timezones
-        var idx = Math.min(currentIndex, timezones.length - 1)
-        return [timezones[idx]]
+        var bar = barTimezones()
+        if (bar.length === 0) return []
+        if (showAll) return bar
+        var idx = Math.min(currentIndex, bar.length - 1)
+        return [bar[idx]]
+    }
+
+    // Toggle showOnBar for a timezone and persist
+    function toggleShowOnBar(index) {
+        var updated = timezones.slice()
+        var entry = Object.assign({}, updated[index])
+        entry.showOnBar = (entry.showOnBar === false) ? true : false
+        updated[index] = entry
+        timezones = updated
+        if (pluginService && pluginService.savePluginData) {
+            pluginService.savePluginData("worldClock", "timezones", updated)
+        }
     }
 
     // ── Horizontal bar pill ─────────────────────────────────────────
@@ -360,14 +382,27 @@ PluginComponent {
                             }
                         }
 
-                        StyledText {
-                            text: root.formatTime(modelData.timezone)
-                            color: Theme.primary
-                            font.pixelSize: Theme.fontSizeXLarge
-                            font.weight: Font.Bold
+                        Row {
                             anchors.right: parent.right
                             anchors.rightMargin: Theme.spacingL
                             anchors.verticalCenter: parent.verticalCenter
+                            spacing: Theme.spacingS
+
+                            DankActionButton {
+                                buttonSize: 28
+                                iconName: (modelData.showOnBar !== false) ? "visibility" : "visibility_off"
+                                iconColor: (modelData.showOnBar !== false) ? Theme.primary : Theme.outline
+                                anchors.verticalCenter: parent.verticalCenter
+                                onClicked: root.toggleShowOnBar(index)
+                            }
+
+                            StyledText {
+                                text: root.formatTime(modelData.timezone)
+                                color: Theme.primary
+                                font.pixelSize: Theme.fontSizeXLarge
+                                font.weight: Font.Bold
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
                         }
                     }
                 }

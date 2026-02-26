@@ -43,7 +43,8 @@
         "type": "object",
         "properties": {
           "timezone": { "type": "string" },
-          "label": { "type": "string" }
+          "label": { "type": "string" },
+          "showOnBar": { "type": "boolean", "default": true }
         }
       }
     }
