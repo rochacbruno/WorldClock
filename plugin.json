@@ -1,8 +1,8 @@
 {
   "id": "worldClock",
   "name": "World Clock",
-  "description": "Multiple timezones display widget",
-  "version": "1.1.0",
+  "description": "Multiple timezones display widget with cycling and 24h format support",
+  "version": "1.2.0",
   "author": "Bruno Cesar Rocha <rochacbruno>",
   "icon": "public",
   "component": "./WorldClockWidget.qml",
@@ -22,6 +22,20 @@
       "type": "boolean",
       "default": false
     },
+    "worldClockShowAll": {
+      "type": "boolean",
+      "default": true
+    },
+    "worldClockCycleInterval": {
+      "type": "integer",
+      "default": 15,
+      "minimum": 3,
+      "maximum": 120
+    },
+    "worldClockUse24h": {
+      "type": "boolean",
+      "default": true
+    },
     "worldClockTimezones": {
       "type": "array",
       "default": [],
@@ -29,7 +43,8 @@
         "type": "object",
         "properties": {
           "timezone": { "type": "string" },
-          "label": { "type": "string" }
+          "label": { "type": "string" },
+          "showOnBar": { "type": "boolean", "default": true }
         }
       }
     }
