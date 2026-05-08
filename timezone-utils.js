@@ -98,3 +98,28 @@ var commonTimezones = [
 function getCommonTimezones() {
     return commonTimezones;
 }
+
+function getDayOffset(timezone) {
+    try {
+        if (typeof moment !== 'undefined') {
+            var localDay = moment().startOf('day')
+            var tzDay = moment().tz(timezone).startOf('day')
+            var localDate = moment().format("YYYY-MM-DD")
+            var tzDate = moment().tz(timezone).format("YYYY-MM-DD")
+            if (localDate === tzDate) return 0
+            return tzDate > localDate ? 1 : -1
+        }
+    } catch (e) {}
+    return 0
+}
+
+function isValidTimezone(timezone) {
+    try {
+        if (typeof moment !== 'undefined' && moment.tz && moment.tz.zone) {
+            return moment.tz.zone(timezone) !== null
+        }
+        return commonTimezones.indexOf(timezone) !== -1
+    } catch (e) {
+        return false
+    }
+}

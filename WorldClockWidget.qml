@@ -89,8 +89,16 @@ PluginComponent {
         return "ERR"
     }
 
+    function dayOffsetText(tz) {
+        if (!systemClock || !systemClock.date) return ""
+        var offset = TimezoneUtils.getDayOffset(tz)
+        if (offset > 0) return " +" + offset
+        if (offset < 0) return " " + offset
+        return ""
+    }
+
     function entryText(entry) {
-        return labelFor(entry) + " " + formatTime(entry.timezone)
+        return labelFor(entry) + " " + formatTime(entry.timezone) + dayOffsetText(entry.timezone)
     }
 
     // Timezones filtered to only those visible on the bar
@@ -125,6 +133,34 @@ PluginComponent {
         var updated = timezones.slice()
         var item = updated.splice(fromIndex, 1)[0]
         updated.splice(toIndex, 0, item)
+        timezones = updated
+        if (pluginService && pluginService.savePluginData) {
+            pluginService.savePluginData("worldClock", "timezones", updated)
+        }
+    }
+
+    function addTimezone(timezone, label) {
+        var tz = timezone.trim()
+        if (!tz) return false
+        if (!TimezoneUtils.isValidTimezone(tz)) return false
+        for (var i = 0; i < timezones.length; i++) {
+            if (timezones[i].timezone === tz) return false
+        }
+        var entry = { timezone: tz, showOnBar: true }
+        if (label && label.trim()) entry.label = label.trim()
+        var updated = timezones.slice()
+        updated.push(entry)
+        timezones = updated
+        if (pluginService && pluginService.savePluginData) {
+            pluginService.savePluginData("worldClock", "timezones", updated)
+        }
+        return true
+    }
+
+    function removeTimezone(index) {
+        if (index < 0 || index >= timezones.length) return
+        var updated = timezones.slice()
+        updated.splice(index, 1)
         timezones = updated
         if (pluginService && pluginService.savePluginData) {
             pluginService.savePluginData("worldClock", "timezones", updated)
@@ -259,7 +295,7 @@ PluginComponent {
                     }
 
                     StyledText {
-                        text: root.formatTime(modelData.timezone)
+                        text: root.formatTime(modelData.timezone) + root.dayOffsetText(modelData.timezone)
                         font.pixelSize: Theme.fontSizeSmall
                         color: Theme.surfaceText
                         anchors.horizontalCenter: parent.horizontalCenter
@@ -283,7 +319,7 @@ PluginComponent {
                     }
 
                     StyledText {
-                        text: root.formatTime(modelData.timezone)
+                        text: root.formatTime(modelData.timezone) + root.dayOffsetText(modelData.timezone)
                         font.pixelSize: Theme.fontSizeSmall
                         color: Theme.surfaceText
                         anchors.horizontalCenter: parent.horizontalCenter
@@ -320,6 +356,112 @@ PluginComponent {
                     : "Cycling every " + root.cycleInterval + "s"
                 font.pixelSize: Theme.fontSizeSmall
                 color: Theme.surfaceVariantText
+            }
+
+            // Add timezone inputs
+            Column {
+                width: parent.width
+                spacing: Theme.spacingXS
+
+                Row {
+                    width: parent.width
+                    spacing: Theme.spacingXS
+
+                    Rectangle {
+                        width: parent.width * 0.55 - Theme.spacingXS
+                        height: addTzInput.height
+                        color: Qt.rgba(Theme.surfaceVariantText.r, Theme.surfaceVariantText.g, Theme.surfaceVariantText.b, 0.15)
+                        radius: Theme.cornerRadius
+                        border.width: addTzError.visible ? 1 : 0
+                        border.color: Theme.withAlpha("red", 0.6)
+
+                        TextInput {
+                            id: addTzInput
+                            width: parent.width - Theme.spacingS * 2
+                            anchors.centerIn: parent
+                            font.pixelSize: Theme.fontSizeSmall
+                            color: Theme.surfaceText
+                            padding: Theme.spacingXS
+                            clip: true
+                            activeFocusOnTab: true
+                            KeyNavigation.tab: addTzLabelInput
+
+                            property string placeholderText: "America/New_York"
+
+                            Text {
+                                text: addTzInput.placeholderText
+                                font.pixelSize: addTzInput.font.pixelSize
+                                color: Theme.surfaceVariantText
+                                visible: !addTzInput.text && !addTzInput.activeFocus
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Keys.onReturnPressed: addTzButton.doAdd()
+                            onTextChanged: if (addTzError.visible) addTzError.visible = false
+                        }
+                    }
+
+                    Rectangle {
+                        width: parent.width * 0.25 - Theme.spacingXS
+                        height: addTzLabelInput.height
+                        color: Qt.rgba(Theme.surfaceVariantText.r, Theme.surfaceVariantText.g, Theme.surfaceVariantText.b, 0.15)
+                        radius: Theme.cornerRadius
+
+                        TextInput {
+                            id: addTzLabelInput
+                            width: parent.width - Theme.spacingS * 2
+                            anchors.centerIn: parent
+                            font.pixelSize: Theme.fontSizeSmall
+                            color: Theme.surfaceText
+                            padding: Theme.spacingXS
+                            clip: true
+                            activeFocusOnTab: true
+                            KeyNavigation.tab: addTzInput
+
+                            property string placeholderText: "Label"
+
+                            Text {
+                                text: addTzLabelInput.placeholderText
+                                font.pixelSize: addTzLabelInput.font.pixelSize
+                                color: Theme.surfaceVariantText
+                                visible: !addTzLabelInput.text && !addTzLabelInput.activeFocus
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Keys.onReturnPressed: addTzButton.doAdd()
+                        }
+                    }
+
+                    DankActionButton {
+                        id: addTzButton
+                        buttonSize: 28
+                        iconName: "add"
+                        iconColor: Theme.primary
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        function doAdd() {
+                            if (addTzInput.text.trim() === "") return
+                            var ok = root.addTimezone(addTzInput.text, addTzLabelInput.text)
+                            if (ok) {
+                                addTzInput.text = ""
+                                addTzLabelInput.text = ""
+                                addTzError.visible = false
+                            } else {
+                                addTzError.visible = true
+                            }
+                        }
+
+                        onClicked: doAdd()
+                    }
+                }
+
+                StyledText {
+                    id: addTzError
+                    text: "Invalid or duplicate timezone"
+                    color: "red"
+                    font.pixelSize: Theme.fontSizeSmall
+                    visible: false
+                }
             }
 
             Column {
@@ -426,6 +568,14 @@ PluginComponent {
                                 onClicked: root.toggleShowOnBar(index)
                             }
 
+                            DankActionButton {
+                                buttonSize: 24
+                                iconName: "delete"
+                                iconColor: Theme.outline
+                                anchors.verticalCenter: parent.verticalCenter
+                                onClicked: root.removeTimezone(index)
+                            }
+
                             StyledText {
                                 text: root.formatTime(modelData.timezone)
                                 color: Theme.primary
@@ -433,12 +583,20 @@ PluginComponent {
                                 font.weight: Font.Bold
                                 anchors.verticalCenter: parent.verticalCenter
                             }
+
+                            StyledText {
+                                text: root.dayOffsetText(modelData.timezone)
+                                color: Theme.surfaceVariantText
+                                font.pixelSize: Theme.fontSizeSmall
+                                anchors.verticalCenter: parent.verticalCenter
+                                visible: text !== ""
+                            }
                         }
                     }
                 }
 
                 StyledText {
-                    text: "No timezones configured.\nAdd some in the plugin settings."
+                    text: "No timezones configured.\nAdd one above."
                     color: Theme.surfaceVariantText
                     font.pixelSize: Theme.fontSizeMedium
                     visible: !root.isLoading && root.timezones.length === 0
@@ -447,6 +605,6 @@ PluginComponent {
         }
     }
 
-    popoutWidth: 380
-    popoutHeight: 420
+    popoutWidth: 400
+    popoutHeight: 480
 }

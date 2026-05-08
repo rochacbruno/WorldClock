@@ -2,7 +2,7 @@
   "id": "worldClock",
   "name": "World Clock",
   "description": "Multiple timezones display widget with cycling and 24h format support",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "author": "Bruno Cesar Rocha <rochacbruno>",
   "icon": "public",
   "component": "./WorldClockWidget.qml",
