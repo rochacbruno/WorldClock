@@ -7,16 +7,7 @@
   "icon": "public",
   "component": "./WorldClockWidget.qml",
   "settings": "./WorldClockSettings.qml",
-  "dependencies": {
-    "moment": {
-      "url": "https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js",
-      "optional": true
-    },
-    "moment-timezone": {
-      "url": "https://cdn.jsdelivr.net/npm/moment-timezone@0.5.43/builds/moment-timezone-with-data.min.js",
-      "optional": true
-    }
-  },
+  "dependencies": [],
   "settings_schema": {
     "worldClockIconOnly": {
       "type": "boolean",

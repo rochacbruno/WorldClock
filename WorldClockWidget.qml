@@ -10,7 +10,7 @@ PluginComponent {
 
     // ── Persisted settings ──────────────────────────────────────────
     property var timezones: []
-    property var pluginService: null
+    pluginId: "worldClock"
     property bool isLoading: true
     property bool iconOnly: false
     property bool showAll: true
@@ -23,18 +23,22 @@ PluginComponent {
     function loadTimezones() {
         if (pluginService && pluginService.loadPluginData) {
             var saved = pluginService.loadPluginData("worldClock", "timezones", [])
-            timezones = (saved && Array.isArray(saved)) ? saved : []
+            var updated = (saved && Array.isArray(saved)) ? saved : []
+            if (JSON.stringify(timezones) !== JSON.stringify(updated))
+                timezones = updated
 
             iconOnly = pluginService.loadPluginData("worldClock", "iconOnly", false) === true
             showAll = pluginService.loadPluginData("worldClock", "showAll", true) !== false
             cycleInterval = pluginService.loadPluginData("worldClock", "cycleInterval", 15) || 15
             use24h = pluginService.loadPluginData("worldClock", "use24h", true) !== false
 
-            var savedIdx = pluginService.loadPluginState
-                ? pluginService.loadPluginState("worldClock", "currentIndex", 0)
-                : 0
-            var barCount = barTimezones().length
-            currentIndex = (savedIdx >= 0 && barCount > 0 && savedIdx < barCount) ? savedIdx : 0
+            if (isLoading) {
+                var savedIdx = pluginService.loadPluginState
+                    ? pluginService.loadPluginState("worldClock", "currentIndex", 0)
+                    : 0
+                var barCount = barTimezones().length
+                currentIndex = (savedIdx >= 0 && savedIdx < barCount) ? savedIdx : 0
+            }
 
             isLoading = false
         }
@@ -44,17 +48,26 @@ PluginComponent {
         loadTimezones()
     }
 
-    // Re-read settings periodically so the bar picks up changes
-    Timer {
-        interval: 3000
-        running: true
-        repeat: true
-        onTriggered: loadTimezones()
+    onPluginServiceChanged: loadTimezones()
+
+    onTimezonesChanged: {
+        var barCount = barTimezones().length
+        if (currentIndex >= barCount)
+            currentIndex = 0
+    }
+
+    Connections {
+        target: root.pluginService
+
+        function onPluginDataChanged(changedPluginId) {
+            if (changedPluginId === "worldClock")
+                root.loadTimezones()
+        }
     }
 
     SystemClock {
         id: systemClock
-        precision: SystemClock.Seconds
+        precision: SystemClock.Minutes
     }
 
     // ── Cycle timer (only active in cycling mode) ──────────────────
@@ -367,69 +380,28 @@ PluginComponent {
                     width: parent.width
                     spacing: Theme.spacingXS
 
-                    Rectangle {
+                    DankTextField {
+                        id: addTzInput
                         width: parent.width * 0.55 - Theme.spacingXS
-                        height: addTzInput.height
-                        color: Qt.rgba(Theme.surfaceVariantText.r, Theme.surfaceVariantText.g, Theme.surfaceVariantText.b, 0.15)
-                        radius: Theme.cornerRadius
-                        border.width: addTzError.visible ? 1 : 0
-                        border.color: Theme.withAlpha("red", 0.6)
+                        font.pixelSize: Theme.fontSizeSmall
+                        placeholderText: "America/New_York"
+                        keyNavigationTab: addTzLabelInput
+                        normalBorderColor: addTzError.visible ? Theme.error : Theme.outline
+                        focusedBorderColor: addTzError.visible ? Theme.error : Theme.primary
 
-                        TextInput {
-                            id: addTzInput
-                            width: parent.width - Theme.spacingS * 2
-                            anchors.centerIn: parent
-                            font.pixelSize: Theme.fontSizeSmall
-                            color: Theme.surfaceText
-                            padding: Theme.spacingXS
-                            clip: true
-                            activeFocusOnTab: true
-                            KeyNavigation.tab: addTzLabelInput
-
-                            property string placeholderText: "America/New_York"
-
-                            Text {
-                                text: addTzInput.placeholderText
-                                font.pixelSize: addTzInput.font.pixelSize
-                                color: Theme.surfaceVariantText
-                                visible: !addTzInput.text && !addTzInput.activeFocus
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-
-                            Keys.onReturnPressed: addTzButton.doAdd()
-                            onTextChanged: if (addTzError.visible) addTzError.visible = false
-                        }
+                        onAccepted: addTzButton.doAdd()
+                        onTextEdited: addTzError.visible = false
                     }
 
-                    Rectangle {
+                    DankTextField {
+                        id: addTzLabelInput
                         width: parent.width * 0.25 - Theme.spacingXS
-                        height: addTzLabelInput.height
-                        color: Qt.rgba(Theme.surfaceVariantText.r, Theme.surfaceVariantText.g, Theme.surfaceVariantText.b, 0.15)
-                        radius: Theme.cornerRadius
+                        font.pixelSize: Theme.fontSizeSmall
+                        placeholderText: "Label"
+                        keyNavigationTab: addTzInput
+                        keyNavigationBacktab: addTzInput
 
-                        TextInput {
-                            id: addTzLabelInput
-                            width: parent.width - Theme.spacingS * 2
-                            anchors.centerIn: parent
-                            font.pixelSize: Theme.fontSizeSmall
-                            color: Theme.surfaceText
-                            padding: Theme.spacingXS
-                            clip: true
-                            activeFocusOnTab: true
-                            KeyNavigation.tab: addTzInput
-
-                            property string placeholderText: "Label"
-
-                            Text {
-                                text: addTzLabelInput.placeholderText
-                                font.pixelSize: addTzLabelInput.font.pixelSize
-                                color: Theme.surfaceVariantText
-                                visible: !addTzLabelInput.text && !addTzLabelInput.activeFocus
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-
-                            Keys.onReturnPressed: addTzButton.doAdd()
-                        }
+                        onAccepted: addTzButton.doAdd()
                     }
 
                     DankActionButton {
@@ -458,7 +430,7 @@ PluginComponent {
                 StyledText {
                     id: addTzError
                     text: "Invalid or duplicate timezone"
-                    color: "red"
+                    color: Theme.error
                     font.pixelSize: Theme.fontSizeSmall
                     visible: false
                 }

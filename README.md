@@ -39,8 +39,8 @@ The plugin stores timezone configurations in the DMS settings. You can add/remov
 - `WorldClockWidget.qml` - Main widget component
 - `WorldClockSettings.qml` - Settings interface
 - `timezone-utils.js` - Timezone utility functions
-- `moment.js` - Moment.js library (stub - replace with real file)
-- `moment-timezone.js` - Moment timezone library (stub - replace with real file)
+- `moment.js` - bundled Moment.js library
+- `moment-timezone.js` - bundled Moment timezone library
 
 ## Permissions
 
